@@ -14,6 +14,7 @@ Track your personal spending by parsing Arabic or English SMS messages using a l
   * "كم صرفت هذا الشهر؟"
   * "What’s my top merchant this month?"
 * View summaries by category or total
+* Simple Streamlit web interface
 
 ---
 
@@ -63,6 +64,12 @@ You can also use `llama3` or `phi3`.
 
 ```bash
 python main.py
+```
+
+### 6. Run the Web Interface
+
+```bash
+python main.py web
 ```
 
 ---
@@ -117,6 +124,7 @@ budget_tracker/
 ├── llm_parser.py
 ├── llm_categorizer.py
 ├── llm_qa.py
+├── streamlit_app.py
 ├── requirements.txt
 ├── transactions.db (auto-created)
 └── README.md

@@ -1,9 +1,12 @@
 import json
 import sqlite3
+import sys
+from datetime import datetime
+import subprocess
+
 from llm_parser import extract_transaction_from_text
 from llm_categorizer import categorize_transaction_with_llm
 from llm_qa import ask_question_about_data
-from datetime import datetime
 
 DB_PATH = "transactions.db"
 
@@ -46,6 +49,11 @@ def load_all_data():
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "web":
+        # launch Streamlit interface
+        subprocess.run([sys.executable, "-m", "streamlit", "run", "streamlit_app.py"])
+        return
+
     print("💬 Enter a financial SMS message (Arabic/English), type 'summary' for report, 'ask' for Q&A, or 'exit':")
 
     while True:
