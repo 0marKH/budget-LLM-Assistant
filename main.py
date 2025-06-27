@@ -35,8 +35,13 @@ def save_to_db(data):
         INSERT INTO transactions (operation, card, merchant, amount, balance, timestamp, category)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     ''', (
-        data["operation"], data["card"], data["merchant"], data["amount"],
-        data["balance"], data["timestamp"], data["category"]
+        data["operation"],
+        data["card"],
+        data["merchant"],
+        float(data["amount"]),
+        float(data["balance"]),
+        data["timestamp"],
+        data["category"]
     ))
     conn.commit()
     conn.close()
@@ -62,7 +67,19 @@ def load_all_data():
     rows = c.fetchall()
     conn.close()
     keys = ["operation", "card", "merchant", "amount", "balance", "timestamp", "category"]
-    return [dict(zip(keys, row)) for row in rows]
+    result = []
+    for row in rows:
+        item = dict(zip(keys, row))
+        try:
+            item["amount"] = float(item["amount"])
+        except (TypeError, ValueError):
+            pass
+        try:
+            item["balance"] = float(item["balance"])
+        except (TypeError, ValueError):
+            pass
+        result.append(item)
+    return result
 
 
 def parse_and_save_message(message: str) -> bool:
@@ -176,11 +193,11 @@ def main():
             break
         elif user_input.lower() == "summary":
             data = load_all_data()
-            total = sum(item['amount'] for item in data)
+            total = sum(float(item['amount']) for item in data)
             print("\n📊 Total Spending: SAR", total)
             by_cat = {}
             for item in data:
-                by_cat[item['category']] = by_cat.get(item['category'], 0) + item['amount']
+                by_cat[item['category']] = by_cat.get(item['category'], 0.0) + float(item['amount'])
             print("📂 By Category:")
             for cat, amt in by_cat.items():
                 print(f"  - {cat}: SAR {amt:.2f}")
