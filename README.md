@@ -70,17 +70,13 @@ python main.py
 ## ✨ Example SMS Input
 
 ```
-شراء  "operation": "شراء",
+  "operation": "شراء",
   "card": "0000 ;فيزا-أبل باي",
   "merchant": "examplco",
   "amount": 35,
   "balance": 10000,
   "timestamp": "2026-06-25T23:54:00"
-بطاقة:0020 ;فيزا-أبل باي
-لدى:khayratc
-مبلغ:SAR 35
-رصيد:SAR 29965
-في:25-6-26 23:54
+
 ```
 
 ---
