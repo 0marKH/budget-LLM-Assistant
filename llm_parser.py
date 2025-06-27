@@ -12,10 +12,10 @@ def extract_transaction_from_text(message, model="mistral"):
 مثال للرد:
 {{
   "operation": "شراء",
-  "card": "0020 ;فيزا-أبل باي",
-  "merchant": "khayratco",
+  "card": "0000 ;فيزا-أبل باي",
+  "merchant": "examplco",
   "amount": 35,
-  "balance": 29965,
+  "balance": 10000,
   "timestamp": "2026-06-25T23:54:00"
 }}
     """
