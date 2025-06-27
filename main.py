@@ -5,7 +5,6 @@ from datetime import datetime
 import subprocess
 from typing import List, Union
 from pathlib import Path
-
 import pandas as pd
 import pdfplumber
 
@@ -13,12 +12,10 @@ from llm_parser import extract_transaction_from_text
 from llm_categorizer import categorize_transaction_with_llm
 from llm_qa import ask_question_about_data
 
-
 DB_PATH = str(Path(__file__).with_name("transactions.db"))
 
 
 def save_to_db(data):
-    
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
@@ -48,9 +45,7 @@ def save_to_db(data):
 def load_all_data():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    # Ensure table exists so summaries work even before any data is saved
-    c.execute(
-        """
+    c.execute('''
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             operation TEXT,
@@ -61,40 +56,50 @@ def load_all_data():
             timestamp TEXT,
             category TEXT
         )
-        """
-    )
+    ''')
     conn.commit()
-
-    c.execute(
-        "SELECT operation, card, merchant, amount, balance, timestamp, category FROM transactions"
-    )
+    c.execute("SELECT operation, card, merchant, amount, balance, timestamp, category FROM transactions")
     rows = c.fetchall()
     conn.close()
-    keys = [
-        "operation",
-        "card",
-        "merchant",
-        "amount",
-        "balance",
-        "timestamp",
-        "category",
-    ]
-def import_transactions_from_pdf(source: Union[str, "IO"]) -> None:
-    """Import transactions from a PDF statement.
+    keys = ["operation", "card", "merchant", "amount", "balance", "timestamp", "category"]
+    return [dict(zip(keys, row)) for row in rows]
 
-    Each transaction in the PDF typically spans multiple lines starting with the
-    date. We combine lines between dates and feed the full text to the LLM
-    parser. Arabic text is preserved.
-    """
+
+def parse_and_save_message(message: str) -> bool:
+    parsed = extract_transaction_from_text(message)
+    if parsed:
+        parsed["category"] = categorize_transaction_with_llm(parsed["merchant"])
+        save_to_db(parsed)
+        print("✅ Transaction saved with category:", parsed["category"])
+        return True
+    print("⚠️ Could not parse message.")
+    return False
+
+
+def import_messages_from_file(path: str) -> None:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            messages = [line.strip() for line in f if line.strip()]
+    except OSError as e:
+        print("Could not read file:", e)
+        return
+    for msg in messages:
+        parse_and_save_message(msg)
+
+
+def import_transactions_from_pdf(source: Union[str, "IO"]) -> None:
+    """Import transactions from a PDF statement."""
+    try:
+        with pdfplumber.open(source) as pdf:
             all_lines = []
+            for page in pdf.pages:
+                text = page.extract_text() or ""
                 all_lines.extend(line.strip() for line in text.splitlines() if line.strip())
 
-        # Skip header lines like "Date Transaction Details ..."
         if all_lines and all_lines[0].lower().startswith("date"):
             all_lines = all_lines[1:]
 
         import re
-
         tx_blocks = []
         current: List[str] = []
         date_re = re.compile(r"^\d{4}/\d{2}/\d{2}")
@@ -109,37 +114,6 @@ def import_transactions_from_pdf(source: Union[str, "IO"]) -> None:
 
         for block in tx_blocks:
             parse_and_save_message(block)
-    parsed = extract_transaction_from_text(message)
-    if parsed:
-        parsed["category"] = categorize_transaction_with_llm(parsed["merchant"])
-        save_to_db(parsed)
-        print("✅ Transaction saved with category:", parsed["category"])
-        return True
-    print("⚠️ Could not parse message.")
-    return False
-
-
-def import_messages_from_file(path: str) -> None:
-    """Import and process messages from a text file."""
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            messages = [line.strip() for line in f if line.strip()]
-    except OSError as e:
-        print("Could not read file:", e)
-        return
-    for msg in messages:
-        parse_and_save_message(msg)
-
-
-def import_transactions_from_pdf(source: Union[str, 'IO']) -> None:
-    """Import transactions from a PDF file path or file-like object."""
-    try:
-        with pdfplumber.open(source) as pdf:
-            for page in pdf.pages:
-                text = page.extract_text() or ""
-                lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-                for line in lines:
-                    parse_and_save_message(line)
     except Exception as e:
         print("Could not read PDF:", e)
 
@@ -190,7 +164,6 @@ def main():
                 print("Unknown export format. Use 'markdown' or 'excel'.")
             return
 
-
     print(
         "💬 Enter a financial SMS message (Arabic/English), type 'summary', 'ask', 'exit',"
         " or use 'batch <file>' / 'pdf <file>' / 'export <format> <file>'."
@@ -201,7 +174,6 @@ def main():
 
         if user_input.lower() == "exit":
             break
-
         elif user_input.lower() == "summary":
             data = load_all_data()
             total = sum(item['amount'] for item in data)
@@ -212,13 +184,11 @@ def main():
             print("📂 By Category:")
             for cat, amt in by_cat.items():
                 print(f"  - {cat}: SAR {amt:.2f}")
-
         elif user_input.lower() == "ask":
             q = input("🧠 Enter your question (Arabic or English):\n")
             data = load_all_data()
             answer = ask_question_about_data(data, q)
             print("🤖 Answer:", answer)
-
         else:
             parse_and_save_message(user_input)
 
