@@ -5,6 +5,7 @@ from datetime import datetime
 import subprocess
 from typing import List, Union
 from pathlib import Path
+
 import pandas as pd
 import pdfplumber
 
@@ -63,6 +64,7 @@ def load_all_data():
         """
     )
     conn.commit()
+
     c.execute(
         "SELECT operation, card, merchant, amount, balance, timestamp, category FROM transactions"
     )
