@@ -73,7 +73,7 @@ python main.py
 python main.py web
 ```
 
-In the web interface you can also upload a PDF statement to import its transactions.
+You can also upload a PDF statement in the web interface to import its transactions.
 
 ---
 
