@@ -31,12 +31,12 @@ if st.button("Add Transaction"):
 
 if st.button("Show Summary"):
     data = load_all_data()
-    total = sum(item['amount'] for item in data)
+    total = sum(float(item['amount']) for item in data)
     st.subheader("Total Spending")
     st.write(f"SAR {total}")
     by_cat = {}
     for item in data:
-        by_cat[item['category']] = by_cat.get(item['category'], 0) + item['amount']
+        by_cat[item['category']] = by_cat.get(item['category'], 0.0) + float(item['amount'])
     st.subheader("By Category")
     for cat, amt in by_cat.items():
         st.write(f"{cat}: SAR {amt:.2f}")
