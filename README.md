@@ -94,6 +94,9 @@ python main.py web
 * **`summary`** → View total and category-wise spending
 * **`ask`** → Ask any question about your data
 * **`exit`** → Quit the app
+* **`batch <file>`** → Import multiple messages from a text file
+* **`export markdown <file>`** → Save all data to a Markdown table
+* **`export excel <file>`** → Save all data to an Excel workbook
 
 ---
 
