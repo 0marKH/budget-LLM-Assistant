@@ -2,11 +2,20 @@ import streamlit as st
 from llm_parser import extract_transaction_from_text
 from llm_categorizer import categorize_transaction_with_llm
 from llm_qa import ask_question_about_data
-from main import save_to_db, load_all_data
+from main import save_to_db, load_all_data, import_transactions_from_pdf
 
 st.title("\U0001F4CA Local LLM Budget Tracker")
 
 message = st.text_area("Paste SMS message (Arabic or English)")
+
+pdf_file = st.file_uploader("Upload bank statement PDF", type="pdf")
+
+if st.button("Import PDF"):
+    if pdf_file is not None:
+        import_transactions_from_pdf(pdf_file)
+        st.success("Imported transactions from PDF.")
+    else:
+        st.warning("Please upload a PDF file first.")
 
 if st.button("Add Transaction"):
     if message:
