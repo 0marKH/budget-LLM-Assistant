@@ -4,6 +4,8 @@ import sys
 from datetime import datetime
 import subprocess
 from typing import List, Union
+from pathlib import Path
+
 import pandas as pd
 import pdfplumber
 
@@ -12,7 +14,7 @@ from llm_categorizer import categorize_transaction_with_llm
 from llm_qa import ask_question_about_data
 
 
-DB_PATH = "transactions.db"
+DB_PATH = str(Path(__file__).with_name("transactions.db"))
 
 
 def save_to_db(data):
@@ -31,6 +33,7 @@ def save_to_db(data):
             category TEXT
         )
     ''')
+    conn.commit()
     c.execute('''
         INSERT INTO transactions (operation, card, merchant, amount, balance, timestamp, category)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -60,6 +63,8 @@ def load_all_data():
         )
         """
     )
+    conn.commit()
+
     c.execute(
         "SELECT operation, card, merchant, amount, balance, timestamp, category FROM transactions"
     )
@@ -74,11 +79,36 @@ def load_all_data():
         "timestamp",
         "category",
     ]
-    return [dict(zip(keys, row)) for row in rows]
+def import_transactions_from_pdf(source: Union[str, "IO"]) -> None:
+    """Import transactions from a PDF statement.
 
+    Each transaction in the PDF typically spans multiple lines starting with the
+    date. We combine lines between dates and feed the full text to the LLM
+    parser. Arabic text is preserved.
+    """
+            all_lines = []
+                all_lines.extend(line.strip() for line in text.splitlines() if line.strip())
 
-def parse_and_save_message(message: str) -> bool:
-    """Parse a single SMS message, categorize it and save to DB."""
+        # Skip header lines like "Date Transaction Details ..."
+        if all_lines and all_lines[0].lower().startswith("date"):
+            all_lines = all_lines[1:]
+
+        import re
+
+        tx_blocks = []
+        current: List[str] = []
+        date_re = re.compile(r"^\d{4}/\d{2}/\d{2}")
+        for ln in all_lines:
+            if date_re.match(ln):
+                if current:
+                    tx_blocks.append(" ".join(current))
+                    current = []
+            current.append(ln)
+        if current:
+            tx_blocks.append(" ".join(current))
+
+        for block in tx_blocks:
+            parse_and_save_message(block)
     parsed = extract_transaction_from_text(message)
     if parsed:
         parsed["category"] = categorize_transaction_with_llm(parsed["merchant"])
