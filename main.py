@@ -3,8 +3,9 @@ import sqlite3
 import sys
 from datetime import datetime
 import subprocess
-from typing import List
+from typing import List, Union
 import pandas as pd
+import pdfplumber
 
 from llm_parser import extract_transaction_from_text
 from llm_categorizer import categorize_transaction_with_llm
@@ -44,10 +45,35 @@ def save_to_db(data):
 def load_all_data():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT operation, card, merchant, amount, balance, timestamp, category FROM transactions")
+    # Ensure table exists so summaries work even before any data is saved
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            operation TEXT,
+            card TEXT,
+            merchant TEXT,
+            amount REAL,
+            balance REAL,
+            timestamp TEXT,
+            category TEXT
+        )
+        """
+    )
+    c.execute(
+        "SELECT operation, card, merchant, amount, balance, timestamp, category FROM transactions"
+    )
     rows = c.fetchall()
     conn.close()
-    keys = ["operation", "card", "merchant", "amount", "balance", "timestamp", "category"]
+    keys = [
+        "operation",
+        "card",
+        "merchant",
+        "amount",
+        "balance",
+        "timestamp",
+        "category",
+    ]
     return [dict(zip(keys, row)) for row in rows]
 
 
@@ -73,6 +99,19 @@ def import_messages_from_file(path: str) -> None:
         return
     for msg in messages:
         parse_and_save_message(msg)
+
+
+def import_transactions_from_pdf(source: Union[str, 'IO']) -> None:
+    """Import transactions from a PDF file path or file-like object."""
+    try:
+        with pdfplumber.open(source) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text() or ""
+                lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+                for line in lines:
+                    parse_and_save_message(line)
+    except Exception as e:
+        print("Could not read PDF:", e)
 
 
 def export_to_markdown(path: str) -> None:
@@ -109,6 +148,9 @@ def main():
         if args[0] == "batch" and len(args) > 1:
             import_messages_from_file(args[1])
             return
+        if args[0] == "pdf" and len(args) > 1:
+            import_transactions_from_pdf(args[1])
+            return
         if args[0] == "export" and len(args) > 2:
             if args[1] == "markdown":
                 export_to_markdown(args[2])
@@ -121,7 +163,7 @@ def main():
 
     print(
         "💬 Enter a financial SMS message (Arabic/English), type 'summary', 'ask', 'exit',"
-        " or use 'batch <file>' / 'export <format> <file>'."
+        " or use 'batch <file>' / 'pdf <file>' / 'export <format> <file>'."
     )
 
     while True:
