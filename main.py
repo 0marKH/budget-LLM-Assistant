@@ -3,10 +3,13 @@ import sqlite3
 import sys
 from datetime import datetime
 import subprocess
+from typing import List
+import pandas as pd
 
 from llm_parser import extract_transaction_from_text
 from llm_categorizer import categorize_transaction_with_llm
 from llm_qa import ask_question_about_data
+
 
 DB_PATH = "transactions.db"
 
@@ -48,13 +51,78 @@ def load_all_data():
     return [dict(zip(keys, row)) for row in rows]
 
 
-def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "web":
-        # launch Streamlit interface
-        subprocess.run([sys.executable, "-m", "streamlit", "run", "streamlit_app.py"])
-        return
+def parse_and_save_message(message: str) -> bool:
+    """Parse a single SMS message, categorize it and save to DB."""
+    parsed = extract_transaction_from_text(message)
+    if parsed:
+        parsed["category"] = categorize_transaction_with_llm(parsed["merchant"])
+        save_to_db(parsed)
+        print("✅ Transaction saved with category:", parsed["category"])
+        return True
+    print("⚠️ Could not parse message.")
+    return False
 
-    print("💬 Enter a financial SMS message (Arabic/English), type 'summary' for report, 'ask' for Q&A, or 'exit':")
+
+def import_messages_from_file(path: str) -> None:
+    """Import and process messages from a text file."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            messages = [line.strip() for line in f if line.strip()]
+    except OSError as e:
+        print("Could not read file:", e)
+        return
+    for msg in messages:
+        parse_and_save_message(msg)
+
+
+def export_to_markdown(path: str) -> None:
+    data = load_all_data()
+    if not data:
+        print("No data to export.")
+        return
+    headers = list(data[0].keys())
+    lines = ["| " + " | ".join(headers) + " |",
+             "| " + " | ".join("---" for _ in headers) + " |"]
+    for row in data:
+        lines.append("| " + " | ".join(str(row[h]) for h in headers) + " |")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print(f"✅ Data exported to {path}")
+
+
+def export_to_excel(path: str) -> None:
+    data = load_all_data()
+    if not data:
+        print("No data to export.")
+        return
+    df = pd.DataFrame(data)
+    df.to_excel(path, index=False)
+    print(f"✅ Data exported to {path}")
+
+
+def main():
+    args = sys.argv[1:]
+    if args:
+        if args[0] == "web":
+            subprocess.run([sys.executable, "-m", "streamlit", "run", "streamlit_app.py"])
+            return
+        if args[0] == "batch" and len(args) > 1:
+            import_messages_from_file(args[1])
+            return
+        if args[0] == "export" and len(args) > 2:
+            if args[1] == "markdown":
+                export_to_markdown(args[2])
+            elif args[1] == "excel":
+                export_to_excel(args[2])
+            else:
+                print("Unknown export format. Use 'markdown' or 'excel'.")
+            return
+
+
+    print(
+        "💬 Enter a financial SMS message (Arabic/English), type 'summary', 'ask', 'exit',"
+        " or use 'batch <file>' / 'export <format> <file>'."
+    )
 
     while True:
         user_input = input("\n⬇️ Paste message or command: \n").strip()
@@ -80,13 +148,7 @@ def main():
             print("🤖 Answer:", answer)
 
         else:
-            parsed = extract_transaction_from_text(user_input)
-            if parsed:
-                parsed['category'] = categorize_transaction_with_llm(parsed['merchant'])
-                save_to_db(parsed)
-                print("✅ Transaction saved with category:", parsed['category'])
-            else:
-                print("⚠️ Could not parse message.")
+            parse_and_save_message(user_input)
 
 
 if __name__ == "__main__":
