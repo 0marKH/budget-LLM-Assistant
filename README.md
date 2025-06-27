@@ -15,6 +15,7 @@ Track your personal spending by parsing Arabic or English SMS messages using a l
   * "What’s my top merchant this month?"
 * View summaries by category or total
 * Simple Streamlit web interface
+* Import transactions from PDF bank statements
 
 ---
 
@@ -72,6 +73,8 @@ python main.py
 python main.py web
 ```
 
+In the web interface you can also upload a PDF statement to import its transactions.
+
 ---
 
 ## ✨ Example SMS Input
@@ -95,6 +98,7 @@ python main.py web
 * **`ask`** → Ask any question about your data
 * **`exit`** → Quit the app
 * **`batch <file>`** → Import multiple messages from a text file
+* **`pdf <file>`** → Import transactions from a PDF statement
 * **`export markdown <file>`** → Save all data to a Markdown table
 * **`export excel <file>`** → Save all data to an Excel workbook
 
