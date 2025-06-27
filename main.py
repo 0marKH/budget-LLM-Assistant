@@ -45,10 +45,35 @@ def save_to_db(data):
 def load_all_data():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT operation, card, merchant, amount, balance, timestamp, category FROM transactions")
+    # Ensure table exists so summaries work even before any data is saved
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            operation TEXT,
+            card TEXT,
+            merchant TEXT,
+            amount REAL,
+            balance REAL,
+            timestamp TEXT,
+            category TEXT
+        )
+        """
+    )
+    c.execute(
+        "SELECT operation, card, merchant, amount, balance, timestamp, category FROM transactions"
+    )
     rows = c.fetchall()
     conn.close()
-    keys = ["operation", "card", "merchant", "amount", "balance", "timestamp", "category"]
+    keys = [
+        "operation",
+        "card",
+        "merchant",
+        "amount",
+        "balance",
+        "timestamp",
+        "category",
+    ]
     return [dict(zip(keys, row)) for row in rows]
 
 
