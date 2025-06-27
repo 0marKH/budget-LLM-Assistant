@@ -69,7 +69,7 @@ python main.py
 ### 6. Run the Web Interface
 
 ```bash
-streamlit run streamlit_app.py
+python main.py web
 ```
 
 ---
