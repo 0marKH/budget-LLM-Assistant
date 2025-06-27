@@ -1,3 +1,6 @@
+import ollama
+
+
 def categorize_transaction_with_llm(merchant, description="", model="mistral"):
     prompt = f"""
 صنف الجهة "{merchant}" (وصف إضافي: "{description}") في واحدة من هذه التصنيفات فقط:

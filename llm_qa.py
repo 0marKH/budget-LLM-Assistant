@@ -1,3 +1,7 @@
+import json
+import ollama
+
+
 def ask_question_about_data(data_list, question, model="mistral"):
     prompt = f"""
 لديك بيانات عمليات مالية بصيغة JSON كما يلي:
